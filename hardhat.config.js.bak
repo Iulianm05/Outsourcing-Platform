@@ -1,0 +1,17 @@
+require("@nomicfoundation/hardhat-toolbox");
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: "0.8.28",
+};
+
+require("@nomicfoundation/hardhat-toolbox");
+
+module.exports = {
+    solidity: "0.8.28", // Specifică versiunea de Solidity
+    networks: {
+        hardhat: {
+            chainId: 1337, // ID-ul pentru rețeaua locală Hardhat
+        },
+    },
+};
