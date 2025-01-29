@@ -1,0 +1,97 @@
+{
+	"compiler": {
+		"version": "0.8.26+commit.8a97fa7a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "freelancer",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "profile",
+						"type": "string"
+					}
+				],
+				"name": "FreelancerRegistered",
+				"type": "event"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "freelancerProfiles",
+				"outputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "profile",
+						"type": "string"
+					}
+				],
+				"name": "registerFreelancer",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/FreelancerRegistry.sol": "FreelancerRegistry"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/FreelancerRegistry.sol": {
+			"keccak256": "0xf24069f4340ae86cb6823d793e1e5c836c4242c649adc4e9deb5bf090de0c0d8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://cbeb51ae761cd6c073346d9882cdb8245641b08b239c9251c79032c3846007ba",
+				"dweb:/ipfs/QmTT8qMtZMU87VaAMzJ1aKYy2hDuJoCXUinjWRRYPqMqST"
+			]
+		}
+	},
+	"version": 1
+}

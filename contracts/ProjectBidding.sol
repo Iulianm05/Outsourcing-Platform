@@ -5,72 +5,64 @@ import "./OutsourcingPlatform.sol";
 
 contract ProjectBidding {
     struct Bid {
-        address freelancer; // Adresa freelancerului
-        uint bidAmount;     // Suma propusă de freelancer
+        address freelancer;
+        uint bidAmount;
+        uint timestamp;
     }
 
-    struct ProjectBids {
-        uint projectId;    // ID-ul proiectului
-        Bid[] bids;        // Lista ofertelor pentru acest proiect
-        bool finalized;    // Dacă licitația este finalizată
-    }
+    mapping(uint => Bid[]) public projectBids;
+    mapping(uint => bool) public projectEscrow; // Fonduri depuse
+    OutsourcingPlatform public platform;
 
-    mapping(uint => ProjectBids) public projectBids; // Mapping pentru licitații
-    OutsourcingPlatform public platform; // Referința către contractul OutsourcingPlatform
-
-    // Evenimente
     event BidPlaced(uint indexed projectId, address indexed freelancer, uint bidAmount);
     event BidFinalized(uint indexed projectId, address indexed freelancer, uint bidAmount);
-
-    // Modificator care permite acces doar angajatorului proiectului
     modifier onlyEmployer(uint projectId) {
-        (address employer, , , , ) = platform.projects(projectId);
+        (address employer, , , , , ) = platform.projects(projectId);
         require(msg.sender == employer, "Not the employer");
         _;
     }
 
-    constructor(address _outsourcingPlatform) {
-        platform = OutsourcingPlatform(_outsourcingPlatform); // Inițializează referința contractului OutsourcingPlatform
+
+
+    constructor(address _platform) {
+        platform = OutsourcingPlatform(_platform);
     }
 
-    // Freelancer trimite o ofertă pentru un proiect
     function placeBid(uint projectId, uint bidAmount) external {
-        require(bidAmount > 0, "Bid amount must be greater than 0");
+        require(bidAmount > 0, "Bid must be greater than 0");
         require(projectId < platform.projectCount(), "Invalid project ID");
 
-        projectBids[projectId].projectId = projectId;
-        projectBids[projectId].bids.push(Bid({
+        projectBids[projectId].push(Bid({
             freelancer: msg.sender,
-            bidAmount: bidAmount
+            bidAmount: bidAmount,
+            timestamp: block.timestamp
         }));
 
         emit BidPlaced(projectId, msg.sender, bidAmount);
     }
 
-    // Angajatorul finalizează licitația și selectează freelancerul câștigător
+    function depositFunds(uint projectId) external payable onlyEmployer(projectId) {
+        require(!projectEscrow[projectId], "Funds already deposited");
+        require(msg.value > 0, "Must deposit funds");
+
+        projectEscrow[projectId] = true;
+    }
+
     function finalizeBid(uint projectId, uint bidIndex) external onlyEmployer(projectId) {
-        ProjectBids storage bids = projectBids[projectId];
-        require(!bids.finalized, "Bidding already finalized");
-        require(bidIndex < bids.bids.length, "Invalid bid index");
+        require(projectEscrow[projectId], "Funds not deposited");
+        require(bidIndex < projectBids[projectId].length, "Invalid bid index");
 
-        Bid memory winningBid = bids.bids[bidIndex];
-        bids.finalized = true;
+        Bid memory winningBid = projectBids[projectId][bidIndex];
+        projectEscrow[projectId] = false;
 
-        // Transferă ETH către freelancerul câștigător
         (bool success, ) = winningBid.freelancer.call{value: winningBid.bidAmount}("");
-        require(success, "Transfer to freelancer failed");
+        require(success, "Transfer failed");
 
-        // Atribuie freelancerul câștigător în OutsourcingPlatform
         platform.assignFreelancer(projectId, winningBid.freelancer);
-
         emit BidFinalized(projectId, winningBid.freelancer, winningBid.bidAmount);
     }
 
-    // Obține ofertele pentru un proiect
     function getBids(uint projectId) external view returns (Bid[] memory) {
-        return projectBids[projectId].bids;
+        return projectBids[projectId];
     }
-
-    // Primește fonduri de la angajator pentru proiect
-    receive() external payable {}
 }
