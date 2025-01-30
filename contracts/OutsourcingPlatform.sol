@@ -1,37 +1,3 @@
-
-// pragma solidity ^0.8.0;
-
-// contract OutsourcingPlatform {
-//     struct Project {
-//         address employer;
-//         uint budget;
-//         string description;
-//         address freelancer;
-//         bool completed;
-//     }
-
-//     uint public projectCount;
-//     mapping(uint => Project) public projects;
-
-//     event ProjectCreated(uint projectId, address employer, uint budget, string description);
-
-//     function createProject(string memory description, uint budget) external payable {
-//         require(msg.value == budget, "Budget must match sent value");
-
-//         projects[projectCount] = Project({
-//             employer: msg.sender,
-//             budget: budget,
-//             description: description,
-//             freelancer: address(0),
-//             completed: false
-//         });
-
-//         emit ProjectCreated(projectCount, msg.sender, budget, description);
-//         projectCount++;
-//     }
-// }
-
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
@@ -47,6 +13,7 @@ contract OutsourcingPlatform {
 
     uint public projectCount;
     mapping(uint => Project) public projects;
+    address public biddingContract; // Adresa contractului ProjectBidding
 
     event ProjectCreated(uint indexed projectId, address indexed employer, uint budget, string description, uint deadline);
     event FreelancerAssigned(uint indexed projectId, address indexed freelancer);
@@ -54,6 +21,14 @@ contract OutsourcingPlatform {
 
     modifier onlyEmployer(uint projectId) {
         require(msg.sender == projects[projectId].employer, "Not the employer");
+        _;
+    }
+
+    modifier onlyEmployerOrBiddingContract(uint projectId) {
+        require(
+            msg.sender == projects[projectId].employer || msg.sender == biddingContract,
+            "Not the employer or bidding contract"
+        );
         _;
     }
 
@@ -65,6 +40,11 @@ contract OutsourcingPlatform {
     }
 
     bool private locked;
+
+    function setBiddingContract(address _biddingContract) external {
+        require(biddingContract == address(0), "Bidding contract already set");
+        biddingContract = _biddingContract;
+    }
 
     function createProject(string memory description, uint budget, uint deadline) external payable {
         require(msg.value == budget, "Budget must match sent ETH");
@@ -84,7 +64,7 @@ contract OutsourcingPlatform {
         projectCount++;
     }
 
-    function assignFreelancer(uint projectId, address freelancer) external onlyEmployer(projectId) {
+    function assignFreelancer(uint projectId, address freelancer) external onlyEmployerOrBiddingContract(projectId) {
         Project storage project = projects[projectId];
         require(project.freelancer == address(0), "Freelancer already assigned");
         require(block.timestamp < project.deadline, "Project deadline passed");

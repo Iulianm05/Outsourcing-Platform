@@ -17,31 +17,39 @@ describe("FreelancerRegistry", function () {
     });
 
     it("Should register a freelancer", async function () {
-        await registry.connect(freelancer).registerFreelancer("Web Developer");
+        await registry.connect(freelancer).registerFreelancer("Full Stack Developer");
         const profile = await registry.freelancerProfiles(freelancer.address);
-        expect(profile).to.equal("Web Developer");
+        expect(profile).to.equal("Full Stack Developer");
+    });
+
+    it("Should not allow registering with a short profile", async function () {
+        await expect(
+            registry.connect(freelancer).registerFreelancer("Too Short")
+        ).to.be.revertedWith("Profile too short");
     });
 
     it("Should emit an event when a freelancer is registered", async function () {
         await expect(
-            registry.connect(freelancer).registerFreelancer("Web Developer")
+            registry.connect(freelancer).registerFreelancer("Blockchain Expert")
         )
             .to.emit(registry, "FreelancerRegistered")
-            .withArgs(freelancer.address, "Web Developer");
+            .withArgs(freelancer.address, "Blockchain Expert");
     });
 
     it("Should allow a freelancer to apply for a project", async function () {
+        const latestBlock = await ethers.provider.getBlock("latest");
+        const deadline = latestBlock.timestamp + 86400; // 1 zi în viitor
+
         // Creează un proiect pe platformă
         await platform
-            .connect(owner)
-            .createProject("Web App", ethers.parseEther("1"), { value: ethers.parseEther("1") });
+        .connect(owner)
+        .createProject("Web Application Project", ethers.parseEther("1"), deadline, { value: ethers.parseEther("1") });
     
         // Angajatorul atribuie freelancerul manual
         await platform.connect(owner).assignFreelancer(0, freelancer.address);
-    
+
         // Verifică că freelancerul a fost atribuit
-        const project = await platform.projects(0);
+        const project = await platform.getProjectDetails(0);
         expect(project.freelancer).to.equal(freelancer.address);
     });
-    
 });
