@@ -4,10 +4,120 @@
   <meta charset="UTF-8" />
   <title>Outsourcing Platform</title>
   <style>
-    /* Minimal styling for clarity */
-    body { font-family: sans-serif; margin: 20px; }
-    h2 { margin-top: 40px; }
-    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 6px; }
+    /* Reset and Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #f4f6f8;
+      color: #333;
+      font-family: 'Roboto', sans-serif;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 0 20px;
+    }
+    header {
+      text-align: center;
+      padding: 20px 0 40px;
+    }
+    header h1 {
+      font-size: 2.5em;
+      color: #3f51b5;
+    }
+    /* Section Styling */
+    .section {
+      background: #fff;
+      padding: 30px;
+      margin-bottom: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .section h2 {
+      font-size: 1.8em;
+      color: #3f51b5;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    /* Input & Button Styling */
+    input[type="number"],
+    input[type="text"],
+    input[type="password"],
+    input,
+    button {
+      font-size: 1em;
+      padding: 12px;
+      margin: 5px 0;
+      border-radius: 4px;
+    }
+    input {
+      border: 1px solid #ddd;
+      width: calc(100% - 26px); /* account for padding and border */
+    }
+    button {
+      background-color: #3f51b5;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      padding: 12px 20px;
+    }
+    button:hover {
+      background-color: #303f9f;
+    }
+    /* Table Styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table thead th {
+      background-color: #3f51b5;
+      color: #fff;
+      padding: 12px 15px;
+      text-align: left;
+    }
+    table tbody td {
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+    }
+    table tbody tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    table tbody tr:nth-child(odd) {
+      background-color: #fff;
+    }
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      input, button {
+        width: 100%;
+      }
+      table thead, table tbody, table th, table td, table tr {
+        display: block;
+      }
+      table tr {
+        margin-bottom: 15px;
+      }
+      table th, table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+      }
+      table th::before, table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        width: 45%;
+        text-align: left;
+        font-weight: bold;
+      }
+    }
   </style>
 </head>
 <body>
@@ -78,549 +188,276 @@
     </tbody>
   </table>
 
+  <hr />
+
+  <!-- New Section: View Bids -->
+  <h2>6. View Bids</h2>
+  <input id="bidProjectId" type="number" placeholder="Project ID" />
+  <button onclick="loadBids()">Load Bids</button>
+  <table>
+    <thead>
+      <tr>
+        <th>Freelancer</th>
+        <th>Bid Amount (ETH)</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody id="bidsTableBody">
+      <!-- Bids will be displayed here -->
+    </tbody>
+  </table>
+
   <!-- Ethers.js v6 UMD build -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.3.0/dist/ethers.umd.min.js"></script>
   <script>
     const ethers = window.ethers;
 
     // Contract addresses (UPDATE THESE TO YOUR DEPLOYED ADDRESSES)
-    const FREELANCER_REGISTRY_ADDRESS = "0x9A676e781A523b5d0C0e43731313A708CB607508";
-    const OUTSOURCING_PLATFORM_ADDRESS = "0x0B306BF915C4d645ff596e518fAf3F9669b97016";
-    const PROJECT_BIDDING_ADDRESS     = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1";
+    const FREELANCER_REGISTRY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+    const OUTSOURCING_PLATFORM_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+    const PROJECT_BIDDING_ADDRESS     = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
 
     // Replace with your actual ABIs
     const FreelancerRegistryABI = [
-		{
-			"anonymous": false,
-			"inputs": [
-				{
-					"indexed": true,
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				},
-				{
-					"indexed": false,
-					"internalType": "string",
-					"name": "profile",
-					"type": "string"
-				}
-			],
-			"name": "FreelancerRegistered",
-			"type": "event"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "address",
-					"name": "",
-					"type": "address"
-				}
-			],
-			"name": "freelancerProfiles",
-			"outputs": [
-				{
-					"internalType": "string",
-					"name": "",
-					"type": "string"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "string",
-					"name": "profile",
-					"type": "string"
-				}
-			],
-			"name": "registerFreelancer",
-			"outputs": [],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		}
-	];
-    const OutsourcingPlatformABI = 	[
-		{
-			"anonymous": false,
-			"inputs": [
-				{
-					"indexed": true,
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"indexed": true,
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				}
-			],
-			"name": "FreelancerAssigned",
-			"type": "event"
-		},
-		{
-			"anonymous": false,
-			"inputs": [
-				{
-					"indexed": true,
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"indexed": true,
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				},
-				{
-					"indexed": false,
-					"internalType": "uint256",
-					"name": "amount",
-					"type": "uint256"
-				}
-			],
-			"name": "PaymentTransferred",
-			"type": "event"
-		},
-		{
-			"anonymous": false,
-			"inputs": [
-				{
-					"indexed": true,
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"indexed": true,
-					"internalType": "address",
-					"name": "employer",
-					"type": "address"
-				},
-				{
-					"indexed": false,
-					"internalType": "uint256",
-					"name": "budget",
-					"type": "uint256"
-				},
-				{
-					"indexed": false,
-					"internalType": "string",
-					"name": "description",
-					"type": "string"
-				},
-				{
-					"indexed": false,
-					"internalType": "uint256",
-					"name": "deadline",
-					"type": "uint256"
-				}
-			],
-			"name": "ProjectCreated",
-			"type": "event"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				}
-			],
-			"name": "assignFreelancer",
-			"outputs": [],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "amount",
-					"type": "uint256"
-				}
-			],
-			"name": "calculateFee",
-			"outputs": [
-				{
-					"internalType": "uint256",
-					"name": "",
-					"type": "uint256"
-				}
-			],
-			"stateMutability": "pure",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				}
-			],
-			"name": "completeProject",
-			"outputs": [],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "string",
-					"name": "description",
-					"type": "string"
-				},
-				{
-					"internalType": "uint256",
-					"name": "budget",
-					"type": "uint256"
-				},
-				{
-					"internalType": "uint256",
-					"name": "deadline",
-					"type": "uint256"
-				}
-			],
-			"name": "createProject",
-			"outputs": [],
-			"stateMutability": "payable",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				}
-			],
-			"name": "getProjectDetails",
-			"outputs": [
-				{
-					"components": [
-						{
-							"internalType": "address",
-							"name": "employer",
-							"type": "address"
-						},
-						{
-							"internalType": "uint256",
-							"name": "budget",
-							"type": "uint256"
-						},
-						{
-							"internalType": "string",
-							"name": "description",
-							"type": "string"
-						},
-						{
-							"internalType": "address",
-							"name": "freelancer",
-							"type": "address"
-						},
-						{
-							"internalType": "uint256",
-							"name": "deadline",
-							"type": "uint256"
-						},
-						{
-							"internalType": "bool",
-							"name": "completed",
-							"type": "bool"
-						}
-					],
-					"internalType": "struct OutsourcingPlatform.Project",
-					"name": "",
-					"type": "tuple"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [],
-			"name": "projectCount",
-			"outputs": [
-				{
-					"internalType": "uint256",
-					"name": "",
-					"type": "uint256"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "",
-					"type": "uint256"
-				}
-			],
-			"name": "projects",
-			"outputs": [
-				{
-					"internalType": "address",
-					"name": "employer",
-					"type": "address"
-				},
-				{
-					"internalType": "uint256",
-					"name": "budget",
-					"type": "uint256"
-				},
-				{
-					"internalType": "string",
-					"name": "description",
-					"type": "string"
-				},
-				{
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				},
-				{
-					"internalType": "uint256",
-					"name": "deadline",
-					"type": "uint256"
-				},
-				{
-					"internalType": "bool",
-					"name": "completed",
-					"type": "bool"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		}
-	];
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "address", "name": "freelancer", "type": "address" },
+          { "indexed": false, "internalType": "string", "name": "profile", "type": "string" }
+        ],
+        "name": "FreelancerRegistered",
+        "type": "event"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "name": "freelancerProfiles",
+        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "string", "name": "profile", "type": "string" }],
+        "name": "registerFreelancer",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+    
+    const OutsourcingPlatformABI = [
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "indexed": true, "internalType": "address", "name": "freelancer", "type": "address" }
+        ],
+        "name": "FreelancerAssigned",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "indexed": true, "internalType": "address", "name": "freelancer", "type": "address" },
+          { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+        ],
+        "name": "PaymentTransferred",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "indexed": true, "internalType": "address", "name": "employer", "type": "address" },
+          { "indexed": false, "internalType": "uint256", "name": "budget", "type": "uint256" },
+          { "indexed": false, "internalType": "string", "name": "description", "type": "string" },
+          { "indexed": false, "internalType": "uint256", "name": "deadline", "type": "uint256" }
+        ],
+        "name": "ProjectCreated",
+        "type": "event"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "internalType": "address", "name": "freelancer", "type": "address" }
+        ],
+        "name": "assignFreelancer",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+        "name": "calculateFee",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "pure",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "projectId", "type": "uint256" }],
+        "name": "completeProject",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "string", "name": "description", "type": "string" },
+          { "internalType": "uint256", "name": "budget", "type": "uint256" },
+          { "internalType": "uint256", "name": "deadline", "type": "uint256" }
+        ],
+        "name": "createProject",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "projectId", "type": "uint256" }],
+        "name": "getProjectDetails",
+        "outputs": [
+          {
+            "components": [
+              { "internalType": "address", "name": "employer", "type": "address" },
+              { "internalType": "uint256", "name": "budget", "type": "uint256" },
+              { "internalType": "string", "name": "description", "type": "string" },
+              { "internalType": "address", "name": "freelancer", "type": "address" },
+              { "internalType": "uint256", "name": "deadline", "type": "uint256" },
+              { "internalType": "bool", "name": "completed", "type": "bool" }
+            ],
+            "internalType": "struct OutsourcingPlatform.Project",
+            "name": "",
+            "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "projectCount",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "name": "projects",
+        "outputs": [
+          { "internalType": "address", "name": "employer", "type": "address" },
+          { "internalType": "uint256", "name": "budget", "type": "uint256" },
+          { "internalType": "string", "name": "description", "type": "string" },
+          { "internalType": "address", "name": "freelancer", "type": "address" },
+          { "internalType": "uint256", "name": "deadline", "type": "uint256" },
+          { "internalType": "bool", "name": "completed", "type": "bool" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ];
+    
     const ProjectBiddingABI = [
-		{
-			"inputs": [
-				{
-					"internalType": "address",
-					"name": "_platform",
-					"type": "address"
-				}
-			],
-			"stateMutability": "nonpayable",
-			"type": "constructor"
-		},
-		{
-			"anonymous": false,
-			"inputs": [
-				{
-					"indexed": true,
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"indexed": true,
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				},
-				{
-					"indexed": false,
-					"internalType": "uint256",
-					"name": "bidAmount",
-					"type": "uint256"
-				}
-			],
-			"name": "BidFinalized",
-			"type": "event"
-		},
-		{
-			"anonymous": false,
-			"inputs": [
-				{
-					"indexed": true,
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"indexed": true,
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				},
-				{
-					"indexed": false,
-					"internalType": "uint256",
-					"name": "bidAmount",
-					"type": "uint256"
-				}
-			],
-			"name": "BidPlaced",
-			"type": "event"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				}
-			],
-			"name": "depositFunds",
-			"outputs": [],
-			"stateMutability": "payable",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"internalType": "uint256",
-					"name": "bidIndex",
-					"type": "uint256"
-				}
-			],
-			"name": "finalizeBid",
-			"outputs": [],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				}
-			],
-			"name": "getBids",
-			"outputs": [
-				{
-					"components": [
-						{
-							"internalType": "address",
-							"name": "freelancer",
-							"type": "address"
-						},
-						{
-							"internalType": "uint256",
-							"name": "bidAmount",
-							"type": "uint256"
-						},
-						{
-							"internalType": "uint256",
-							"name": "timestamp",
-							"type": "uint256"
-						}
-					],
-					"internalType": "struct ProjectBidding.Bid[]",
-					"name": "",
-					"type": "tuple[]"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "projectId",
-					"type": "uint256"
-				},
-				{
-					"internalType": "uint256",
-					"name": "bidAmount",
-					"type": "uint256"
-				}
-			],
-			"name": "placeBid",
-			"outputs": [],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		},
-		{
-			"inputs": [],
-			"name": "platform",
-			"outputs": [
-				{
-					"internalType": "contract OutsourcingPlatform",
-					"name": "",
-					"type": "address"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "",
-					"type": "uint256"
-				},
-				{
-					"internalType": "uint256",
-					"name": "",
-					"type": "uint256"
-				}
-			],
-			"name": "projectBids",
-			"outputs": [
-				{
-					"internalType": "address",
-					"name": "freelancer",
-					"type": "address"
-				},
-				{
-					"internalType": "uint256",
-					"name": "bidAmount",
-					"type": "uint256"
-				},
-				{
-					"internalType": "uint256",
-					"name": "timestamp",
-					"type": "uint256"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "",
-					"type": "uint256"
-				}
-			],
-			"name": "projectEscrow",
-			"outputs": [
-				{
-					"internalType": "bool",
-					"name": "",
-					"type": "bool"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		}
-	];
- 
+      {
+        "inputs": [{ "internalType": "address", "name": "_platform", "type": "address" }],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "indexed": true, "internalType": "address", "name": "freelancer", "type": "address" },
+          { "indexed": false, "internalType": "uint256", "name": "bidAmount", "type": "uint256" }
+        ],
+        "name": "BidFinalized",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "indexed": true, "internalType": "address", "name": "freelancer", "type": "address" },
+          { "indexed": false, "internalType": "uint256", "name": "bidAmount", "type": "uint256" }
+        ],
+        "name": "BidPlaced",
+        "type": "event"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "projectId", "type": "uint256" }],
+        "name": "depositFunds",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "internalType": "uint256", "name": "bidIndex", "type": "uint256" }
+        ],
+        "name": "finalizeBid",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "projectId", "type": "uint256" }],
+        "name": "getBids",
+        "outputs": [
+          {
+            "components": [
+              { "internalType": "address", "name": "freelancer", "type": "address" },
+              { "internalType": "uint256", "name": "bidAmount", "type": "uint256" },
+              { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+            ],
+            "internalType": "struct ProjectBidding.Bid[]",
+            "name": "",
+            "type": "tuple[]"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "projectId", "type": "uint256" },
+          { "internalType": "uint256", "name": "bidAmount", "type": "uint256" }
+        ],
+        "name": "placeBid",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "platform",
+        "outputs": [
+          { "internalType": "contract OutsourcingPlatform", "name": "", "type": "address" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "", "type": "uint256" },
+          { "internalType": "uint256", "name": "", "type": "uint256" }
+        ],
+        "name": "projectBids",
+        "outputs": [
+          { "internalType": "address", "name": "freelancer", "type": "address" },
+          { "internalType": "uint256", "name": "bidAmount", "type": "uint256" },
+          { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "name": "projectEscrow",
+        "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ];
+
     let signer;
     let freelancerRegistry, outsourcingPlatform, projectBidding;
 
@@ -630,7 +467,6 @@
           alert("Metamask is not installed.");
           return;
         }
-
         await window.ethereum.request({ method: "eth_requestAccounts" });
         const provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
@@ -642,7 +478,7 @@
         const address = await signer.getAddress();
         document.getElementById("walletInfo").innerText = `Wallet: ${address}`;
       } catch (error) {
-        console.error(error);
+        console.error("Wallet connection failed:", error);
         alert("Wallet connection failed: " + error.message);
       }
     }
@@ -650,12 +486,12 @@
     async function registerFreelancer() {
       try {
         const profile = document.getElementById("freelancerProfile").value;
-        if (profile.length <= 10) throw new Error("Profile must be at least 10 characters.");
+        if (profile.length < 10) throw new Error("Profile must be at least 10 characters.");
         const tx = await freelancerRegistry.registerFreelancer(profile);
         await tx.wait();
         alert("Freelancer registered!");
       } catch (error) {
-        console.error(error);
+        console.error("Error registering freelancer:", error);
         alert(error.message);
       }
     }
@@ -665,61 +501,135 @@
         const desc = document.getElementById("projectDescription").value;
         const budgetEth = document.getElementById("projectBudget").value;
         const deadline = parseInt(document.getElementById("projectDeadline").value);
-
-        if (desc.length <= 10) throw new Error("Description too short.");
+        if (desc.length < 10) throw new Error("Description too short.");
         if (deadline <= Date.now() / 1000) throw new Error("Deadline must be in the future.");
         const budgetWei = ethers.parseEther(budgetEth || "0");
-
         const tx = await outsourcingPlatform.createProject(desc, budgetWei, deadline, { value: budgetWei });
         await tx.wait();
         alert("Project created!");
       } catch (error) {
-        console.error(error);
+        console.error("Error creating project:", error);
+        alert(error.message);
+      }
+    }
+
+    async function completeProject() {
+      try {
+        const projectId = document.getElementById("completeProjectId").value;
+        if (!projectId) throw new Error("Please enter a project ID.");
+        const tx = await outsourcingPlatform.completeProject(projectId);
+        await tx.wait();
+        alert("Project completed!");
+      } catch (error) {
+        console.error("Error completing project:", error);
         alert(error.message);
       }
     }
 
     async function loadAllProjects() {
-  try {
-    // projectCount() is a BigInt
-    const count = await outsourcingPlatform.projectCount();
-
-    const tableBody = document.getElementById("projectsTableBody");
-    tableBody.innerHTML = "";
-
-    // Convert the BigInt "count" to a normal number if you want to loop
-    const countNum = Number(count);
-
-    for (let i = 0; i < countNum; i++) {
-      // getProjectDetails(i) returns a struct with BigInt fields
-      const project = await outsourcingPlatform.getProjectDetails(i);
-
-      // Convert budget (BigInt) to readable ETH
-      const budgetEth = ethers.formatEther(project.budget); // formatEther returns a string
-
-      // Convert deadline (BigInt) to a normal number for Date conversion
-      const deadlineMs = Number(project.deadline) * 1000; 
-      const deadlineDate = new Date(deadlineMs);
-
-      // Create a table row
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${i}</td>
-        <td>${project.employer}</td>
-        <td>${budgetEth}</td>
-        <td>${project.description}</td>
-        <td>${project.freelancer || "Not assigned"}</td>
-        <td>${deadlineDate.toLocaleString()}</td>
-        <td>${project.completed ? "✔" : "✖"}</td>
-      `;
-      tableBody.appendChild(row);
+      try {
+        const count = await outsourcingPlatform.projectCount();
+        const tableBody = document.getElementById("projectsTableBody");
+        tableBody.innerHTML = "";
+        const countNum = Number(count);
+        for (let i = 0; i < countNum; i++) {
+          const project = await outsourcingPlatform.getProjectDetails(i);
+          const budgetEth = ethers.formatEther(project.budget);
+          const deadlineDate = new Date(Number(project.deadline) * 1000);
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${i}</td>
+            <td>${project.employer}</td>
+            <td>${budgetEth}</td>
+            <td>${project.description}</td>
+            <td>${project.freelancer || "Not assigned"}</td>
+            <td>${deadlineDate.toLocaleString()}</td>
+            <td>${project.completed ? "✔" : "✖"}</td>
+          `;
+          tableBody.appendChild(row);
+        }
+      } catch (error) {
+        console.error("Error loading projects:", error);
+        alert(error.message);
+      }
     }
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
-  }
-}
 
- </script>
+    // --- Missing Functions Added Below ---
+
+    async function placeBid() {
+      try {
+        const projectId = document.getElementById("projectIdBid").value;
+        const bidEth = document.getElementById("bidAmount").value;
+        if (!projectId || !bidEth) {
+          throw new Error("Please enter both a project ID and a bid amount.");
+        }
+        const bidWei = ethers.parseEther(bidEth.toString());
+        console.log("Placing bid for project", projectId, "with bid amount", bidWei);
+        const tx = await projectBidding.placeBid(projectId, bidWei);
+        await tx.wait();
+        alert("Bid placed successfully!");
+      } catch (error) {
+        console.error("Error placing bid:", error);
+        alert("Error placing bid: " + error.message);
+      }
+    }
+
+    async function depositFunds() {
+      try {
+        const projectId = document.getElementById("depositProjectId").value;
+        const depositEth = document.getElementById("depositAmount").value;
+        if (!projectId || !depositEth) {
+          throw new Error("Please enter both a project ID and a deposit amount.");
+        }
+        const depositWei = ethers.parseEther(depositEth.toString());
+        console.log("Depositing funds for project", projectId, "with deposit amount", depositWei);
+        const tx = await projectBidding.depositFunds(projectId, { value: depositWei });
+        await tx.wait();
+        alert("Funds deposited successfully!");
+      } catch (error) {
+        console.error("Error depositing funds:", error);
+        alert("Error depositing funds: " + error.message);
+      }
+    }
+
+    async function finalizeBid() {
+      try {
+        const projectId = document.getElementById("finalizeProjectId").value;
+        const bidIndex = document.getElementById("bidIndex").value;
+        if (!projectId || !bidIndex) {
+          throw new Error("Please enter both a project ID and a bid index.");
+        }
+        console.log("Finalizing bid for project", projectId, "with bid index", bidIndex);
+        const tx = await projectBidding.finalizeBid(projectId, bidIndex);
+        await tx.wait();
+        alert("Bid finalized successfully!");
+      } catch (error) {
+        console.error("Error finalizing bid:", error);
+        alert("Error finalizing bid: " + error.message);
+      }
+    }
+
+    // New Function: Load and display bids for a given project
+    async function loadBids() {
+      try {
+        const projectId = document.getElementById("bidProjectId").value;
+        if (!projectId) throw new Error("Please enter a project ID.");
+        const bids = await projectBidding.getBids(projectId);
+        const tableBody = document.getElementById("bidsTableBody");
+        tableBody.innerHTML = "";
+        bids.forEach(bid => {
+          const freelancer = bid.freelancer;
+          const bidAmountEth = ethers.formatEther(bid.bidAmount);
+          const timestamp = new Date(Number(bid.timestamp) * 1000).toLocaleString();
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${freelancer}</td><td>${bidAmountEth}</td><td>${timestamp}</td>`;
+          tableBody.appendChild(row);
+        });
+      } catch (error) {
+        console.error("Error loading bids:", error);
+        alert("Error loading bids: " + error.message);
+      }
+    }
+  </script>
 </body>
 </html>
